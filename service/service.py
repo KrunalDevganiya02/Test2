@@ -61,14 +61,7 @@ def test_model_v2(file: UploadFile):
     except Exception as e:
         return {"error": f"Failed to complete the request: {str(e)}"}
 
-def createMetadata(metadata: Metadata):
-    try:
-        metadata_dict = metadata.dict()
-        inserted_metadata = collectionMeta.insert_one(metadata_dict)
-        return {"message": "Metadata created successfully", "metadata_id": str(inserted_metadata.inserted_id)}
-        
-    except Exception as e:
-        return {"error": f"Failed to send metaFeedback the request: {str(e)}"}
+
 
 def createFeedback(feedback: Feedback):
     try:
