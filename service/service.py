@@ -1,18 +1,18 @@
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException, UploadFile,Form
 from config import AppConfig
 import base64
 import json
 import requests
 from pydantic import BaseModel
 from typing import List 
-from database.database import client,db,collectionMeta,collectionResult,collectionCategory,collectionQuestion
-# from models.models import Metadata,Feedback
-
+from database.database import collectionMeta,collectionResult
+from ciaos import save
 from pydantic import BaseModel
 from typing import List 
+import re
 
 class QuestionAnswer(BaseModel):
-    questionID:str
+    questionID :str
     answer : str
 
 class Metadata(BaseModel):
@@ -49,10 +49,11 @@ def test_model_v2(file: UploadFile):
         files = {'file': (file.filename, file.file.read(), file.content_type)}
         response = requests.post(f"{AppConfig.MAS_SERVICE_URL}{AppConfig.MAS_SERVICE_ENDPOINT}", files=files)
         
+
         if response.status_code == 200:
             try:
                 result = response.json()
-                return "No" if result == 0 else "Yes"
+                return "No" if result == 0 else "Yes" 
             except ValueError:
                 return {"error": "Failed to parse JSON response"}
         else:
@@ -60,8 +61,6 @@ def test_model_v2(file: UploadFile):
         
     except Exception as e:
         return {"error": f"Failed to complete the request: {str(e)}"}
-
-
 
 def createFeedback(feedback: Feedback):
     try:
@@ -71,31 +70,30 @@ def createFeedback(feedback: Feedback):
     except Exception as e:
         return {"error": f"Failed to send feedback the request: {str(e)}"}
 
-
-def read_model_data():
+def fetch_metadata(query):
     try:
         data = []
-        for document in collectionMeta.find():
+        for document in (collectionMeta.find({"type":query})):
             data.append(document["value"])
         return data
     except Exception as e:
-         return {"error": f"Failed to fetch category: {str(e)}"}
+         return {"error": f"Failed to fetch metadata: {str(e)}"}
 
-def read_category():
+# def fetch_imageKey(strr):
+#     try:
+#         response = save(AppConfig.STORAGE_BASE_URL, None, strr )
+#         print("here")
+#         print(response)
+#         return response
+#     except Exception as e:
+#          return {"error": f"Failed to fetch image key: {str(e)}"}
+
+
+def fetch_imageKey(image: List[str] = Form(...)):
     try:
-        data = []
-        for document in collectionCategory.find():
-            data.append(document["category"])
-        return data
-    except Exception as e:
-         return {"error": f"Failed to fetch category: {str(e)}"}
-
-def read_question():
-    try:
-        data = []
-        for document in collectionQuestion.find():
-            data.append(document["q"])
-        return data
-    except Exception as e:
-         return {"error": f"Failed to fetch category: {str(e)}"}
-
+        response = save(AppConfig.STORAGE_BASE_URL, "", image)
+        json_response = response.json()
+        key = json_response.get('key') 
+        return key
+    except HTTPException as e:
+        return JSONResponse(content={"error": str(e.detail)}, status_code=e.status_code)
